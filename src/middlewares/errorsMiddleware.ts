@@ -5,6 +5,7 @@ import {ObjectId} from "mongodb";
 import {productsCollection} from "../db/mongodb";
 import {repositoryOrders} from "../features/orders/repository.orders";
 import {ProductsInOrderType} from "../features/orders/model/CreateOrderModel";
+import {repositoryProducts} from "../features/products/repository.products";
 
 
 export const productParamsValidation = param("id").notEmpty().isString().custom(
@@ -59,7 +60,7 @@ export const ordersInputValidationMiddleware = [
                 }
 
 
-                const productFromDb = await repositoryOrders.findProductById(product.id);
+                const productFromDb = await repositoryProducts.findProduct(new ObjectId(product.id));
                 if (!productFromDb) {
                     throw new Error(`Product with id ${product.id} does not exist`);
                 }

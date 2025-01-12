@@ -1,13 +1,13 @@
-import {Router, Request, Response} from "express";
+import {Request, Response, Router} from "express";
 import {WithId} from 'mongodb'
 import {HTTP_STATUSES} from "../../status.code";
 import {serviceProducts} from "./service.products";
 import {ProductType, RequestWithBody, RequestWithParamsAndBody} from "../../types/types";
 import {CreateProductModel} from "../../features/products/models/CreatePoductModel";
 import {
-    productParamsValidation,
-    errorsMiddleware,
-    productsInputValidationMiddleware, increaseInputValidationMiddleware, decreaseInputValidationMiddleware
+    decreaseInputValidationMiddleware,
+    increaseInputValidationMiddleware,
+    productsInputValidationMiddleware
 } from "../../middlewares/errorsMiddleware";
 
 

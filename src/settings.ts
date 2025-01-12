@@ -8,6 +8,7 @@ export const SETTINGS = {
     PATH: {
         PRODUCTS: '/products',
         ORDERS: '/orders',
+        TESTS:'/tests'
     },
     MONGO_URI: process.env.MONGO_URL || 'mongodb://0.0.0.0:27017',
     DB_NAME: 'Coffee_mug',

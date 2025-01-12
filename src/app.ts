@@ -3,7 +3,7 @@ import cors from 'cors'
 import {SETTINGS} from "./settings";
 import {productsRouter} from "./features/products";
 import {ordersRouter} from "./features/orders";
-
+import {testRouter} from "../__tests__/testing";
 
 
 export const app = express()
@@ -18,3 +18,4 @@ app.get('/', (req, res) => {
 
 app.use(SETTINGS.PATH.PRODUCTS, productsRouter)
 app.use(SETTINGS.PATH.ORDERS, ordersRouter);
+app.use(SETTINGS.PATH.TESTS, testRouter);
