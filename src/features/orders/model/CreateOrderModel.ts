@@ -7,4 +7,5 @@ export type ProductsInOrderType = {
 export type CreateOrderModel = {
     customerId: string
     products:ProductsInOrderType[]
+    createdAt:string
 }

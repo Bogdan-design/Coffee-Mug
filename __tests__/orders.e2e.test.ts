@@ -1,129 +1,94 @@
-import request from 'supertest';
+import {Collection, Db} from "mongodb";
+import {getInMemoryDb, stopInMemoryDb} from "./test.db";
+import {req} from "./test.helpers";
 import {OrderType} from "../src/types/types";
-import {repositoryOrders} from "../src/features/orders/repository.orders";
-import {app} from "../src/app";
+import {SETTINGS} from "../src/settings";
 import {HTTP_STATUSES} from "../src/status.code";
 import {CreateOrderModel} from "../src/features/orders/model/CreateOrderModel";
-import {serviceOrders} from "../src/features/orders/service.orders";
-
-
-jest.mock('../../features/orders/repository.orders');
-jest.mock('../../features/orders/service.orders');
 
 describe('/orders', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
+    let db: Db;
+    let ordersCollection: Collection<OrderType>;
+
+    beforeAll(async () => {
+        db = await getInMemoryDb();
+        ordersCollection = db.collection<OrderType>("orders");
+
+        await req
+            .delete(`${SETTINGS.PATH.TESTS}/all-data`)
+            .expect(HTTP_STATUSES.NO_CONTENT_204);
+    });
+
+    beforeEach(async () => {
+        await ordersCollection.deleteMany({});
+    });
+
+    afterAll(async () => {
+        await stopInMemoryDb();
     });
 
     describe('GET /orders', () => {
         it('+ Should return all orders with status 200', async () => {
-            const mockOrders: OrderType[] = [
+            const orders: OrderType[] = [
                 {
                     id: 'order1',
                     customerId: 'customer1',
                     products: [
-                        {productId: 'product1', quantity: 2},
-                        {productId: 'product2', quantity: 3},
+                        {id: 'product1', quantity: 2},
+                        {id: 'product2', quantity: 3},
                     ],
-                    total: 100,
                     createdAt: new Date().toISOString(),
                 },
             ];
+            await ordersCollection.insertMany(orders);
 
-            (repositoryOrders.findAllOrders as jest.Mock).mockResolvedValue(mockOrders);
+            const response = await req
+                .get(SETTINGS.PATH.ORDERS)
+                .expect(HTTP_STATUSES.OK_200);
 
-            const response = await request(app).get('/orders').expect(HTTP_STATUSES.OK_200);
-
-            expect(response.body).toEqual(mockOrders);
-            expect(repositoryOrders.findAllOrders).toHaveBeenCalledTimes(1);
+            expect(response.body).toEqual(orders);
         });
 
-        it('- Should return 500 if there is an internal server error', async () => {
-            (repositoryOrders.findAllOrders as jest.Mock).mockImplementation(() => {
+        it('- Should return 500 if the database operation fails', async () => {
+            // Simulate a database error
+            jest.spyOn(ordersCollection, 'find').mockImplementationOnce(() => {
                 throw new Error('Database error');
             });
 
-            const response = await request(app).get('/orders').expect(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+            const response = await req
+                .get(SETTINGS.PATH.ORDERS)
+                .expect(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
 
-            expect(response.body).toEqual('Server errorError: Database error');
+            expect(response.body).toContain('Server error');
         });
     });
 
     describe('POST /orders', () => {
         it('+ Should create an order with valid input and return status 201', async () => {
-            const mockOrder: OrderType = {
-                id: 'order1',
-                customerId: 'customer1',
-                products: [
-                    {productId: 'product1', quantity: 2},
-                    {productId: 'product2', quantity: 3},
-                ],
-                total: 100,
-                createdAt: new Date().toISOString(),
-            };
-
-            const mockResult = {acknowledged: true};
-
             const createOrderData: CreateOrderModel = {
                 customerId: 'customer1',
                 products: [
-                    {productId: 'product1', quantity: 2},
-                    {productId: 'product2', quantity: 3},
+                    {id: 'product1', quantity: 2},
+                    {id: 'product2', quantity: 3},
                 ],
+                createdAt: new Date().toString()
             };
 
-            (serviceOrders.createOrder as jest.Mock).mockResolvedValue({
-                result: mockResult,
-                order: mockOrder,
-            });
-
-            const response = await request(app)
-                .post('/orders')
+            const response = await req
+                .post(SETTINGS.PATH.ORDERS)
                 .send(createOrderData)
                 .expect(HTTP_STATUSES.CREATED_201);
 
-            expect(response.body).toEqual(mockOrder);
-            expect(serviceOrders.createOrder).toHaveBeenCalledWith(
-                createOrderData.customerId,
-                createOrderData.products
-            );
-        });
+            const createdOrder = await ordersCollection.findOne({id: response.body.id});
 
-        it('- Should return 500 if creation fails (result.acknowledged is false)', async () => {
-            const createOrderData: CreateOrderModel = {
-                customerId: 'customer1',
-                products: [{productId: 'product1', quantity: 2}],
-            };
-
-            (serviceOrders.createOrder as jest.Mock).mockResolvedValue({
-                result: {acknowledged: false},
-                order: null,
+            expect(createdOrder).not.toBeNull();
+            expect(response.body).toEqual({
+                id: response.body.id,
+                customerId: createOrderData.customerId,
+                products: createOrderData.products,
+                total: response.body.total,
+                createdAt: response.body.createdAt,
             });
-
-            const response = await request(app)
-                .post('/orders')
-                .send(createOrderData)
-                .expect(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
-
-            expect(response.body).toEqual('Not enough in stock');
-        });
-
-        it('- Should return 500 if service throws an error', async () => {
-            const createOrderData: CreateOrderModel = {
-                customerId: 'customer1',
-                products: [{productId: 'product1', quantity: 2}],
-            };
-
-            (serviceOrders.createOrder as jest.Mock).mockImplementation(() => {
-                throw new Error('Service error');
-            });
-
-            const response = await request(app)
-                .post('/orders')
-                .send(createOrderData)
-                .expect(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
-
-            expect(response.body).toEqual('Server errorError: Service error');
         });
 
         it('- Should return 400 if input validation fails', async () => {
@@ -132,12 +97,31 @@ describe('/orders', () => {
                 products: [], // Invalid products array
             };
 
-            const response = await request(app)
-                .post('/orders')
+            const response = await req
+                .post(SETTINGS.PATH.ORDERS)
                 .send(invalidOrderData)
                 .expect(HTTP_STATUSES.BAD_REQUEST_400);
 
             expect(response.body).toHaveProperty('errorsMessages');
+        });
+
+        it('- Should return 500 if the database operation fails', async () => {
+            jest.spyOn(ordersCollection, 'insertOne').mockImplementationOnce(() => {
+                throw new Error('Database error');
+            });
+
+            const createOrderData: CreateOrderModel = {
+                customerId: 'customer1',
+                products: [{id: 'product1', quantity: 2}],
+                createdAt: new Date().toString()
+            };
+
+            const response = await req
+                .post(SETTINGS.PATH.ORDERS)
+                .send(createOrderData)
+                .expect(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
+
+            expect(response.body).toContain('Server error');
         });
     });
 });

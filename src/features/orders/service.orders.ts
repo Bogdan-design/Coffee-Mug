@@ -22,7 +22,8 @@ export const serviceOrders = {
 
         const newOrder: CreateOrderModel = {
             customerId,
-            products: productsInOrder
+            products: productsInOrder,
+            createdAt: new Date().toISOString()
         }
 
         const result = await repositoryOrders.createOrder(newOrder)

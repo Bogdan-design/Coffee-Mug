@@ -18,6 +18,7 @@ export type OrderType = {
     id?: string
     customerId: string
     products:ProductInOrderType[]
+    createdAt: string
 }
 
 export type RequestWithBody<T> = Request<{}, {}, T>
