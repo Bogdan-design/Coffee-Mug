@@ -11,11 +11,19 @@ export const ordersController = {
     async createOrder(req: RequestWithBody<CreateOrderModel>, res: Response<any>) {
         try {
             const customerId: string = req.body.customerId
-            const productsInOrder: ProductType[] = req.body.products
+            const productsInOrder = req.body.products
 
-            const newOrder = await serviceOrders.createOrder(customerId, productsInOrder)
+            const {order,result} = await serviceOrders.createOrder(customerId, productsInOrder)
 
-            if (!newOrder) {
+            if (!result.acknowledged) {
+                res
+                    .status(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500)
+                    .json(
+                        'Not enough in stock'
+                    )
+            }
+
+            if (!order) {
                 res
                     .status(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500)
                     .json(
@@ -25,7 +33,7 @@ export const ordersController = {
 
             res
                 .status(HTTP_STATUSES.CREATED_201)
-                .json(newOrder)
+                .json(order)
             return
 
         } catch (e) {

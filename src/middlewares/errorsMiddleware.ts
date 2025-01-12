@@ -3,18 +3,8 @@ import {body, FieldValidationError, param, validationResult} from "express-valid
 import {HTTP_STATUSES} from "../status.code";
 import {ObjectId} from "mongodb";
 import {productsCollection} from "../db/mongodb";
-
-const getProductFromDatabase = async (id: string): Promise<{ id: string; stock: number } | null> => {
-    // Уявна база даних
-    const mockDatabase = [
-        { id: 'p1', stock: 10 },
-        { id: 'p2', stock: 5 },
-        { id: 'p3', stock: 0 }, // Продукт із нульовим залишком
-    ];
-
-    return mockDatabase.find((product) => product.id === id) || null;
-};
-
+import {repositoryOrders} from "../features/orders/repository.orders";
+import {ProductsInOrderType} from "../features/orders/model/CreateOrderModel";
 
 
 export const productParamsValidation = param("id").notEmpty().isString().custom(
@@ -57,7 +47,7 @@ export const ordersInputValidationMiddleware = [
         .isString().withMessage('Customer ID must be a string'),
     body('products')
         .isArray({min: 1}).withMessage('Products must be a non-empty array')
-        .custom(async (products) => {
+        .custom(async (products:ProductsInOrderType[]) => {
             if (!Array.isArray(products)) {
                 throw new Error('Products must be an array');
             }
@@ -69,13 +59,13 @@ export const ordersInputValidationMiddleware = [
                 }
 
 
-                const productFromDb = await getProductFromDatabase(product.id);
+                const productFromDb = await repositoryOrders.findProductById(product.id);
                 if (!productFromDb) {
                     throw new Error(`Product with id ${product.id} does not exist`);
                 }
 
 
-                if (productFromDb.stock <= 0) {
+                if (productFromDb.stock < product.quantity) {
                     throw new Error(`Product with id ${product.id} is out of stock`);
                 }
             }

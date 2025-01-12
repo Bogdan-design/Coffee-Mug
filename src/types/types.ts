@@ -9,10 +9,15 @@ export type ProductType = {
     stock:number
 }
 
+export type ProductInOrderType={
+    id:string
+    quantity: number
+}
+
 export type OrderType = {
     id?: string
     customerId: string
-    products:ProductType[]
+    products:ProductInOrderType[]
 }
 
 export type RequestWithBody<T> = Request<{}, {}, T>
