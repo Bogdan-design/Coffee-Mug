@@ -5,6 +5,7 @@ import {SETTINGS} from "../src/settings";
 import {HTTP_STATUSES} from "../src/status.code";
 import {ProductType} from "../src/types/types";
 import {CreateProductModel} from "../src/features/products/models/CreatePoductModel";
+import {productTestManager} from "./productTestManager";
 
 describe('/products', () => {
     let db: Db;
@@ -85,44 +86,24 @@ describe('/products', () => {
             .expect(HTTP_STATUSES.NOT_FOUND_404);
     });
 
-    it('+ POST should update product details with valid data (status 204)', async () => {
-        const productModel: CreateProductModel = {
-            name: 'Original Name',
-            description: 'Original Description',
-            stock: 5,
-            price: 50
-        };
+    it('+ POST should update product details with valid data (status 200)', async () => {
+        const product1 = await productTestManager.createProduct()
 
-        // Create product
-        const createRes = await req
-            .post(SETTINGS.PATH.PRODUCTS)
-            .send(productModel)
-            .expect(HTTP_STATUSES.CREATED_201);
-
-        const productId = createRes.body.id;
+        const productId = product1.id
 
         // Update product
         const updatedProductModel = {
-            name: 'Updated Name',
-            description: 'Updated Description',
-            stock: 15,
-            price: 150
+            increase: 15,
         };
 
-        await req
-            .put(`${SETTINGS.PATH.PRODUCTS}/${productId}`)
-            .send(updatedProductModel)
-            .expect(HTTP_STATUSES.NO_CONTENT_204);
 
-        // Verify update
-        const updatedRes = await req
-            .get(`${SETTINGS.PATH.PRODUCTS}/${productId}`)
+
+        const res = await req
+            .post(`${SETTINGS.PATH.PRODUCTS}/${productId}/restock`)
+            .send(updatedProductModel)
             .expect(HTTP_STATUSES.OK_200);
 
-        expect(updatedRes.body).toEqual({
-            id: productId,
-            ...updatedProductModel,
-        });
+        expect(res.body.stock).toEqual(25)
     });
 
 });

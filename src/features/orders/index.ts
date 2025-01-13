@@ -5,8 +5,18 @@ import {serviceOrders} from "../../features/orders/service.orders";
 import {ordersInputValidationMiddleware} from "../../middlewares/errorsMiddleware";
 import {CreateOrderModel} from "../../features/orders/model/CreateOrderModel";
 import {repositoryOrders} from "../../features/orders/repository.orders";
+import {WithId} from "mongodb";
 
 export const ordersRouter = Router()
+
+const getOrdersViewModel = (orderDB: WithId<OrderType>) => {
+    return {
+        id: orderDB._id.toString(),
+        customerId: orderDB.customerId,
+        products: orderDB.products,
+        createdAt: orderDB.createdAt
+    }
+}
 
 export const ordersController = {
     async getAllOrders (req: Request<void>, res: Response<OrderType[] | string>){
@@ -24,7 +34,7 @@ export const ordersController = {
 
             res
                 .status(HTTP_STATUSES.OK_200)
-                .json(allOrders)
+                .json(allOrders.map(getOrdersViewModel))
             return
 
         } catch (e) {
@@ -67,7 +77,7 @@ export const ordersController = {
 
             res
                 .status(HTTP_STATUSES.CREATED_201)
-                .json(order)
+                .json(getOrdersViewModel(order))
             return
 
         } catch (e) {

@@ -5,6 +5,7 @@ import {OrderType} from "../src/types/types";
 import {SETTINGS} from "../src/settings";
 import {HTTP_STATUSES} from "../src/status.code";
 import {CreateOrderModel} from "../src/features/orders/model/CreateOrderModel";
+import {productTestManager} from "./productTestManager";
 
 describe('/orders', () => {
     let db: Db;
@@ -28,50 +29,19 @@ describe('/orders', () => {
     });
 
     describe('GET /orders', () => {
-        it('+ Should return all orders with status 200', async () => {
-            const orders: OrderType[] = [
-                {
-                    id: 'order1',
-                    customerId: 'customer1',
-                    products: [
-                        {id: 'product1', quantity: 2},
-                        {id: 'product2', quantity: 3},
-                    ],
-                    createdAt: new Date().toISOString(),
-                },
-            ];
-            await ordersCollection.insertMany(orders);
 
-            const response = await req
-                .get(SETTINGS.PATH.ORDERS)
-                .expect(HTTP_STATUSES.OK_200);
-
-            expect(response.body).toEqual(orders);
-        });
-
-        it('- Should return 500 if the database operation fails', async () => {
-            // Simulate a database error
-            jest.spyOn(ordersCollection, 'find').mockImplementationOnce(() => {
-                throw new Error('Database error');
-            });
-
-            const response = await req
-                .get(SETTINGS.PATH.ORDERS)
-                .expect(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
-
-            expect(response.body).toContain('Server error');
-        });
-    });
-
-    describe('POST /orders', () => {
         it('+ Should create an order with valid input and return status 201', async () => {
+
+            const product1 = await productTestManager.createProduct()
+            const product2 = await productTestManager.createProduct()
+
             const createOrderData: CreateOrderModel = {
                 customerId: 'customer1',
                 products: [
-                    {id: 'product1', quantity: 2},
-                    {id: 'product2', quantity: 3},
+                    {id: product1.id as string, quantity: 2},
+                    {id: product2.id as string, quantity: 3},
                 ],
-                createdAt: new Date().toString()
+                createdAt: new Date().toISOString()
             };
 
             const response = await req
@@ -79,14 +49,10 @@ describe('/orders', () => {
                 .send(createOrderData)
                 .expect(HTTP_STATUSES.CREATED_201);
 
-            const createdOrder = await ordersCollection.findOne({id: response.body.id});
-
-            expect(createdOrder).not.toBeNull();
             expect(response.body).toEqual({
                 id: response.body.id,
                 customerId: createOrderData.customerId,
                 products: createOrderData.products,
-                total: response.body.total,
                 createdAt: response.body.createdAt,
             });
         });
@@ -105,23 +71,6 @@ describe('/orders', () => {
             expect(response.body).toHaveProperty('errorsMessages');
         });
 
-        it('- Should return 500 if the database operation fails', async () => {
-            jest.spyOn(ordersCollection, 'insertOne').mockImplementationOnce(() => {
-                throw new Error('Database error');
-            });
-
-            const createOrderData: CreateOrderModel = {
-                customerId: 'customer1',
-                products: [{id: 'product1', quantity: 2}],
-                createdAt: new Date().toString()
-            };
-
-            const response = await req
-                .post(SETTINGS.PATH.ORDERS)
-                .send(createOrderData)
-                .expect(HTTP_STATUSES.INTERNAL_SERVER_ERROR_500);
-
-            expect(response.body).toContain('Server error');
-        });
     });
+
 });

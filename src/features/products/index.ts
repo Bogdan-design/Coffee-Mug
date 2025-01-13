@@ -45,7 +45,7 @@ export const productsController = {
 
 
     },
-    async createProduct(req: RequestWithBody<CreateProductModel>, res: Response<any>) {
+    async createProduct(req: RequestWithBody<CreateProductModel>, res: Response<ProductType | string>) {
         try {
             const data = req.body
 
@@ -77,7 +77,7 @@ export const productsController = {
         }
 
     },
-    async stockIncrement(req: RequestWithParamsAndBody<{ id: string }, { increase: string }>, res: Response<any>) {
+    async stockIncrement(req: RequestWithParamsAndBody<{ id: string }, { increase: string }>, res: Response<ProductType | string>) {
 
         try {
 
@@ -107,7 +107,7 @@ export const productsController = {
         }
 
     },
-    async stockDecrement(req: RequestWithParamsAndBody<{ id: string }, { decrease: string }>, res: Response<any>) {
+    async stockDecrement(req: RequestWithParamsAndBody<{ id: string }, { decrease: string }>, res: Response<ProductType | string>) {
 
         try {
 
